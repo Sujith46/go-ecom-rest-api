@@ -61,6 +61,28 @@ func getPeople(c *gin.Context) {
 	c.JSON(http.StatusOK, people)
 }
 
+func retirePerson(c *gin.Context) {
+	personID := c.Param("id")
+
+	collection := client.Database("test").Collection("people")
+
+	filter := bson.M{"_id": personID}
+	update := bson.M{"$set": bson.M{"retired": true}}
+
+	result, err := collection.UpdateOne(context.Background(), filter, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Person retired successfully"})
+}
+
 func main() {
 	// Connect to MongoDB
 	mongoURL := utils.ReadEnv("MONGODB_URI")
@@ -78,6 +100,7 @@ func main() {
 	// Define API routes
 	router.POST("/people", createPerson)
 	router.GET("/people", getPeople)
+	router.GET("/people/:id/retire", retirePerson)
 
 	// Start the server
 	log.Println("Server is running on :8080...")
